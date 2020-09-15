@@ -20,7 +20,7 @@ training.samLoc = trans[training.samLoc]
 names(training.samLoc) = rownames(training.sample)
 
 #read test data
-a = read.csv("SNPsalleVPs.csv", stringsAsFactors = FALSE, header = FALSE)
+a = read.csv("SNPstwoVPs.csv", stringsAsFactors = FALSE, header = FALSE)
 test.sample = a[2:nrow(a), 2:ncol(a)]
 rownames(test.sample) = a[2:nrow(a), 1]
 colnames(test.sample) = a[1,2:ncol(a)]

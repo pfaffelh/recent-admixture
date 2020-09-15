@@ -62,6 +62,18 @@ analysis_EUROFORGENE.r: Script for the analysis of the 1000 genomes data when us
 analysis_Kidd.r: Same for the Kidd AIMset.
 
 In data/self, the scripts for analysing the self-collected individuals are stored, as well as the reference datasets.
+Note that the required file SNPstwoVPs.csv which contains genotype information is not contained in the repository. Please ask the authors when you are interested in this data.
 
-Note that the required file SNPsalleVPs.csv which contains genotype information is not contained in the repository. Please ask the authors when you are interested in this data.
+If you want to analyse your own data, you can use the files in data/self as well. Then, you have to provide a csv-file with the same structure as SNPstwoVPs.csv (ideally with tabs as delimiter) and change line 23 in analysis_iullumina.r in order to read this file.
+
+The R-scripts do not produce figures. Results are variables like (for the self-collected individuals):
+training.freqs: Allele frequencies in the training set
+predictions: For the naive Bayes classifier, prediction probabilities are given.
+ia: Individual Admixture for all samples
+loglik.ia: Log-likelihood of the admixture modek for all samples, broken down for all SNPs
+pia: Parental Individual Admixture for all samples (each sample is one row, the two parents are reported consecutively)
+loglik.pia: Log-likelihood of the recent-admixture modek for all samples, broken down for all SNPs
+delta.loglik: Difference of rowSums(loglik.pia) and rowSums(loglik.pia)
+test.sample: The data which is analysed
+training.samLoc: Sampling locations for individuals in the training set
 
