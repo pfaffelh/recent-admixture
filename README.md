@@ -26,7 +26,6 @@ log.prediction.naiveBayes(sample.test, refallelecounts.training, allallelecounts
 get.refallelecounts = function(sample, samLoc)
 get.allallelecounts = function(sample, samLoc).
 
-
 getfreqs = function(sample, samLoc)
 Computes allele frequencies in all populations. Result is a matrix of size npops x nss
 
@@ -48,11 +47,18 @@ This function is called iteratively from get.recentadmixtureproportions.
 fun2(ia, freqs, loc.sample) 
 This function is called iteratively from get.admixtureproportions.
 
-loglik.admixture(loc.sample, freqs, admixture.proportions, sum=TRUE)
+get.loglik.admixture(loc.sample, freqs, admixture.proportions, sum=TRUE)
 Log-likelihood function for the admixture model. If sum=TRUE, a single value is reported. If sum=FALSE, the contributions of the single SNPs to the log-likelihood are given. 
 
-loglik.recentadmixture(loc.sample, freqs, recentadmixture.proportions, sum = TRUE) 
+get.loglik.recentadmixture(loc.sample, freqs, recentadmixture.proportions, sum = TRUE) 
 Same as loglik.admixture, but for the recent-admixture model.
+
+rdirichlet(n, classes)
+Simulates a Dirichlet(1,...,1)-distributed random variable, where classes is the number of entries and n is the number of simulated vectors. This is used as starting point to get.admixtureproportions and  get.recentadmixtureproportions.
+
+simulate.p.value(loc.sample, freqs, nsam=100, tol=1e-06, verbose = TRUE) 
+For simulation of p-values for the trace loc.sample and the allele frequencies of the reference database freqs, this function simulates nsam individuals with the same admixtureproportions as loc.sample, and reports back the frequency of delta-loglikelihoods above the trace.
+
 
 In data/1000G, all relevant data and analysis scripts from the 1000 genomes dataset are stored.
 1000G_AIMsetEUROFORGEN.vcf.gz: Data for 121 SNPs from the EUROFORGEN AIMset in the 1000 genomes dataset. 

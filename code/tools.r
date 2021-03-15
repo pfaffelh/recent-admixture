@@ -1,3 +1,6 @@
+require("vcfR")
+require("parallel")
+
 # inds is nsam x 3 matrix, where the first column are the column names from the vcf.gz file which we want to read;
 # the second column is the population, the third the superpopulation
 
@@ -91,7 +94,8 @@ get.admixtureproportions<-function(sample, freqs, tol=1e-6, verbose = FALSE) {
   nss = ncol(freqs)
   
   # initialize admixture proportions
-  res = rep(1/npops, npops)
+  res = as.vector(rdirichlet(1,npops))
+  #  res = rep(1/npops, npops)
   names(res) = rownames(freqs)
 
   err = 1
@@ -125,8 +129,10 @@ get.recentadmixtureproportions<-function(sample, freqs, tol=1e-6, verbose = FALS
   
   # initialize admixture proportions, res has two rows for the two parents
 #  a = get.admixtureproportions(sample, freqs, tol, verbose = FALSE)
-  a = rep(1/npops, npops)
-  res = rbind(a,a) # matrix(1/npops, nrow=2, ncol=npops)
+#  a = rep(1/npops, npops)
+#  a = rep(1/npops, npops)
+#  res = rbind(a,a) # matrix(1/npops, nrow=2, ncol=npops)
+  res = rdirichlet(2,npops)
   colnames(res) = rownames(freqs)
 
   err = 1
@@ -155,9 +161,6 @@ fun3<-function(ia, freqs, loc.sample) {
   ia[2,] = rowSums(E)/(nss) * ia[2,]
   ia[2,] = ia[2,]/(sum(ia[2,]))
 
-  loc = ia %*% freqs # has nss cols and two rows
-  loc[loc==0] = 1e-16
-  loc[loc==1] = 1-1e-16
   for(k in 1:npops) {
     E[k,] = (loc.sample==2)*freqs[k,]/loc[1,] + (loc.sample==0)*(1-freqs[k,])/(1-loc[1,]) + (loc.sample==1)*(freqs[k,]*(1-loc[2,]) + (1-freqs[k,])*loc[2,])/(loc[2,]*(1-loc[1,]) + loc[1,]*(1-loc[2,]))
   }
@@ -184,14 +187,14 @@ fun2<-function(ia, freqs, loc.sample) {
   res/(sum(res))
 }
 
-loglik.admixture<-function(loc.sample, freqs, admixture.proportions, sum=TRUE) {
+get.loglik.admixture<-function(loc.sample, freqs, admixture.proportions, sum=TRUE) {
   loc = t(freqs) %*% admixture.proportions
   if(sum) res = sum(log(choose(2, loc.sample) * loc^loc.sample * (1-loc)^(2-loc.sample)))
   else res = log(choose(2, loc.sample) * loc^loc.sample * (1-loc)^(2-loc.sample))
   res
 }
 
-loglik.recentadmixture<-function(loc.sample, freqs, recentadmixture.proportions, sum = TRUE) {
+get.loglik.recentadmixture<-function(loc.sample, freqs, recentadmixture.proportions, sum = TRUE) {
   if(is.vector(recentadmixture.proportions)) {
     n = length(recentadmixture.proportions)
     recentadmixture.proportions = rbind(recentadmixture.proportions[1:(n/2)], recentadmixture.proportions[(n/2+1):n])
@@ -200,6 +203,39 @@ loglik.recentadmixture<-function(loc.sample, freqs, recentadmixture.proportions,
   loc2 = t(freqs) %*% recentadmixture.proportions[2,]
   if(sum) res = sum(log((loc.sample==2) * loc1 * loc2 + (loc.sample==1) * (loc1 * (1-loc2) + (1-loc1)*loc2) + (loc.sample==0) * (1-loc1) * (1-loc2)))
   else res = log((loc.sample==2) * loc1 * loc2 + (loc.sample==1) * (loc1 * (1-loc2) + (1-loc1)*loc2) + (loc.sample==0) * (1-loc1) * (1-loc2))
+  res
+}
+
+rdirichlet<-function(n, classes){
+  res = matrix(rexp(classes*n), ncol=classes, nrow=n)
+  res / rowSums(res)
+}
+
+simulate.p.value<-function(loc.sample, freqs, nsam=100, tol=1e-06, verbose = TRUE) {
+  loc.ia<-get.admixtureproportions(loc.sample, freqs, tol, verbose = FALSE)
+  loc.pia<-get.recentadmixtureproportions(loc.sample, freqs, tol, verbose = FALSE)
+  loc.loglik.recentadmixture = get.loglik.recentadmixture(loc.sample, freqs, loc.pia)
+  loc.loglik.admixture = get.loglik.admixture(loc.sample, freqs, loc.ia)
+  loc.delta.ell = loc.loglik.recentadmixture - loc.loglik.admixture
+
+  demes = nrow(freqs)
+  if(verbose) {
+    cat("Simulating p-value for delta.ell =", loc.delta.ell, "and pia =", round(loc.pia,3), ".\n", sep=" ")
+  } 
+  # simulate nsam individuals with the same ia; store result in sample
+  sample = matrix(0, ncol=ncol(freqs), nrow = nsam)
+  rownames(sample) = 1:nsam
+  colnames(sample) = colnames(freqs)
+  for(j in 1:ncol(freqs)) {
+    p = loc.ia %*% freqs[,j]
+    sample[,j] = rbinom(nsam, 2, p)
+  }
+  ia =  get.admixtureproportions.multi(sample, freqs, tol=tol, verbose=FALSE)
+  pia = get.recentadmixtureproportions.multi(sample, freqs, tol=tol, verbose=FALSE)
+  delta.ell = sapply(1:nrow(sample), function(x) get.loglik.recentadmixture(sample[x,], freqs, loc.pia) - get.loglik.admixture(sample[x,],
+     freqs, loc.ia))
+  res = list(ia = loc.ia, pia = loc.pia, loglik.recentadmixture = loc.loglik.recentadmixture, loglik.admixture = loc.loglik.admixture,
+    delta.ell = loc.delta.ell, p = mean(delta.ell>loc.delta.ell))
   res
 }
 
